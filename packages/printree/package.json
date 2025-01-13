@@ -1,0 +1,48 @@
+{
+	"name": "@suin/printree",
+	"version": "0.0.0-alpha.2",
+	"description": "A flexible TypeScript library for rendering tree structures as ASCII art",
+	"keywords": [
+		"tree",
+		"ascii",
+		"ascii-art",
+		"ascii-tree",
+		"tree-view",
+		"directory-tree",
+		"json-tree",
+		"typescript"
+	],
+	"homepage": "https://github.com/suin/printree#readme",
+	"bugs": {
+		"url": "https://github.com/suin/printree/issues"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/suin/printree.git"
+	},
+	"license": "MIT",
+	"author": {
+		"name": "suin",
+		"url": "https://github.com/suin"
+	},
+	"sideEffects": false,
+	"type": "module",
+	"exports": {
+		".": {
+			"types": "./js/index.d.ts",
+			"import": "./js/index.js"
+		}
+	},
+	"main": "./js/index.js",
+	"types": "./js/index.d.ts",
+	"files": ["js", "ts", "!ts/**/*.test.*"],
+	"devDependencies": {
+		"outdent": "^0.8.0"
+	},
+	"engines": {
+		"node": ">=22.0.0"
+	},
+	"publishConfig": {
+		"access": "public"
+	}
+}
