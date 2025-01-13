@@ -1,6 +1,6 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { outdent } from "outdent";
-import { format, type Options } from "./index.js";
+import { type Options, format } from "./index.js";
 
 describe("format", () => {
 	describe("Basic tree formatting", () => {
