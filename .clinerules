@@ -10,3 +10,29 @@ test:
 
     - description: Run a specific test case
       command: bunx vitest --no-color --run "render tree with single node" packages/printree/ts/render.test.ts
+
+release:
+  description: Steps for creating a new release
+  steps:
+    - description: Get the latest release
+      command: gh release list
+    - description: Check changes since last release
+      command: git log $last_version..HEAD --oneline --no-merges
+
+    - description: Update version in package.json
+      mannually: Edit packages/printree/package.json
+    - description: Commit version update
+      commands:
+        - git add packages/printree/package.json
+        - 'git commit -s -m "chore(release): v${new_version}"'
+    - description: Create and push tag
+      commands:
+        - git tag -a "v${new_version}" -m "Release v${new_version}"
+        - git push origin main "v${new_version}"
+    - description: Think about the changes
+      mannually: Think release note in your head
+      template: |
+        ## Changes
+        <changes>
+    - description: Create GitHub release
+      command: gh release create "v${new_version}" --title "v${new_version}" --notes "${note}"
