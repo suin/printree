@@ -1,6 +1,6 @@
 import { outdent } from "outdent";
 import { describe, expect, it } from "vitest";
-import { type Input, render, leaf, parent } from "./render.js";
+import { type Input, leaf, parent, render } from "./render.js";
 
 describe("render", () => {
 	it.each<[message: string, input: Input, expected: string]>([

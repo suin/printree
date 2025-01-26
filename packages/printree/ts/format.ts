@@ -1,5 +1,5 @@
-import { render, type Options as RenderingOptions } from "./render.js";
-import { transform, type Input, type Mapping } from "./transform.js";
+import { type Options as RenderingOptions, render } from "./render.js";
+import { type Input, type Mapping, transform } from "./transform.js";
 
 /**
  * Formats a tree structure into a human-readable ASCII tree representation.

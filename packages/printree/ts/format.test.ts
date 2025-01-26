@@ -1,5 +1,5 @@
-import { describe, expect, test } from "vitest";
 import { outdent } from "outdent";
+import { describe, expect, test } from "vitest";
 import { type Options, format } from "./format.js";
 
 describe("format", () => {
