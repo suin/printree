@@ -1,6 +1,6 @@
-import { describe, expect, test } from "bun:test";
 import { outdent } from "outdent";
-import { type Options, format } from "./index.js";
+import { describe, expect, test } from "vitest";
+import { type Options, format } from "./format.js";
 
 describe("format", () => {
 	describe("Basic tree formatting", () => {
@@ -8,15 +8,17 @@ describe("format", () => {
 		type Parent = { kind: string; children: Node[] };
 		type Leaf = { kind: string; value: string };
 		const options: Options<Node> = {
-			getChildren(node) {
-				return "children" in node ? node.children : undefined;
-			},
-			formatNode(node) {
-				let text = node.kind;
-				if ("value" in node) {
-					text += `: ${JSON.stringify(node.value)}`;
-				}
-				return text;
+			mapping: {
+				getChildren(node) {
+					return "children" in node ? node.children : undefined;
+				},
+				toText(node) {
+					let text = node.kind;
+					if ("value" in node) {
+						text += `: ${JSON.stringify(node.value)}`;
+					}
+					return text;
+				},
 			},
 		};
 
@@ -116,15 +118,17 @@ describe("format", () => {
 		type Parent = { kind: string; children: Node[] };
 		type Leaf = { kind: string; value: string };
 		const options: Options<Node> = {
-			getChildren(node) {
-				return "children" in node ? node.children : undefined;
-			},
-			formatNode(node, { index }) {
-				let text = node.kind;
-				if ("value" in node) {
-					text += `: ${JSON.stringify(node.value)}`;
-				}
-				return index !== undefined ? `${index} ${text}` : text;
+			mapping: {
+				getChildren(node) {
+					return "children" in node ? node.children : undefined;
+				},
+				toText(node, { index }) {
+					let text = node.kind;
+					if ("value" in node) {
+						text += `: ${JSON.stringify(node.value)}`;
+					}
+					return index !== undefined ? `${index} ${text}` : text;
+				},
 			},
 		};
 
@@ -149,7 +153,7 @@ describe("format", () => {
 				],
 			};
 			const expected = outdent`
-      root
+      0 root
       ├─ 0 node
       │  ├─ 0 leaf: "Hello"
       │  └─ 1 leaf: "World!"
@@ -166,18 +170,20 @@ describe("format", () => {
 		type Parent = { kind: string; children: Node[] };
 		type Leaf = { kind: string; value: string };
 		const options: Options<Node> = {
-			getChildren(node) {
-				return "children" in node ? node.children : undefined;
-			},
-			formatNode(node, { children }) {
-				let text = node.kind;
-				if (children) {
-					text += `[${children.length}]`;
-				}
-				if ("value" in node) {
-					text += `: ${JSON.stringify(node.value)}`;
-				}
-				return text;
+			mapping: {
+				getChildren(node) {
+					return "children" in node ? node.children : undefined;
+				},
+				toText(node, { children }) {
+					let text = node.kind;
+					if (children) {
+						text += `[${children.length}]`;
+					}
+					if ("value" in node) {
+						text += `: ${JSON.stringify(node.value)}`;
+					}
+					return text;
+				},
 			},
 		};
 
@@ -245,19 +251,23 @@ describe("format", () => {
 	});
 
 	describe("Tree formatting with key-value labels at start", () => {
-		const options: Options<object | string> = {
-			getChildren(node) {
-				if (typeof node === "object") {
-					return Object.entries(node);
-				}
-				return undefined;
-			},
-			formatNode(node, { label }) {
-				const prefix = label ? `${label} = ` : "";
-				if (typeof node === "string") {
-					return `${prefix}${JSON.stringify(node)}`;
-				}
-				return label ? label : ".";
+		type Parent = { [key: string]: Node };
+		type Node = Parent | string;
+		const options: Options<Node> = {
+			mapping: {
+				getChildren(node) {
+					if (typeof node === "object") {
+						return Object.entries(node).map(([name, node]) => ({ name, node }));
+					}
+					return undefined;
+				},
+				toText(node, { name }) {
+					const prefix = name ? `${name} = ` : "";
+					if (typeof node === "string") {
+						return `${prefix}${JSON.stringify(node)}`;
+					}
+					return name ? name : ".";
+				},
 			},
 		};
 
@@ -292,19 +302,23 @@ describe("format", () => {
 	});
 
 	describe("Tree formatting with key-value labels at end", () => {
-		const options: Options<object | string> = {
-			getChildren(node) {
-				if (typeof node === "object") {
-					return Object.entries(node);
-				}
-				return undefined;
-			},
-			formatNode(node, { label }) {
-				const postfix = label ? ` = ${label}` : "";
-				if (typeof node === "string") {
-					return `${JSON.stringify(node)}${postfix}`;
-				}
-				return `object${postfix}`;
+		type Parent = { [key: string]: Node };
+		type Node = Parent | string;
+		const options: Options<Node> = {
+			mapping: {
+				getChildren(node) {
+					if (typeof node === "object") {
+						return Object.entries(node).map(([name, node]) => ({ name, node }));
+					}
+					return undefined;
+				},
+				toText(node, { name }) {
+					const postfix = name ? ` = ${name}` : "";
+					if (typeof node === "string") {
+						return `${JSON.stringify(node)}${postfix}`;
+					}
+					return `object${postfix}`;
+				},
 			},
 		};
 
@@ -343,11 +357,13 @@ describe("format", () => {
 		type Directory = { type: "directory"; name: string; children: Entry[] };
 		type File = { type: "file"; name: string };
 		const options: Options<Entry> = {
-			getChildren(node) {
-				return node.type === "directory" ? node.children : undefined;
-			},
-			formatNode(node) {
-				return node.name;
+			mapping: {
+				getChildren(node) {
+					return node.type === "directory" ? node.children : undefined;
+				},
+				toText(node) {
+					return node.name;
+				},
 			},
 		};
 
@@ -393,21 +409,26 @@ describe("format", () => {
 		type ArrayNode = { type: "Array"; elements: Node[] };
 		type ValueNode = { type: "Scalar"; value: string };
 		const options: Options<Node> = {
-			getChildren(node) {
-				if (node.type === "Array") {
-					return node.elements;
-				}
-				if (node.type === "Object") {
-					return Object.entries(node.properties);
-				}
-				return undefined;
-			},
-			formatNode(node, { label }) {
-				const propetyName = label ? `${label}: ` : "";
-				if (node.type === "Scalar") {
-					return `${propetyName}Scalar ${JSON.stringify(node.value)}`;
-				}
-				return `${propetyName}${node.type}`;
+			mapping: {
+				getChildren(node) {
+					if (node.type === "Array") {
+						return node.elements;
+					}
+					if (node.type === "Object") {
+						return Object.entries(node.properties).map(([name, node]) => ({
+							name,
+							node,
+						}));
+					}
+					return undefined;
+				},
+				toText(node, { name }) {
+					const propetyName = name ? `${name}: ` : "";
+					if (node.type === "Scalar") {
+						return `${propetyName}Scalar ${JSON.stringify(node.value)}`;
+					}
+					return `${propetyName}${node.type}`;
+				},
 			},
 		};
 

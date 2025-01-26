@@ -18,4 +18,4 @@ jobs:
       - run: bun install
       - run: biome ci
       - run: bun run build
-      - run: bun test
+      - run: bun run test

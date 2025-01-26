@@ -17,31 +17,18 @@ npm install @suin/printree
 - 📁 Perfect for directory trees, JSON AST, and more
 - 💪 Written in TypeScript with full type safety
 
+
 ## Usage
 
 ### Basic Example
 
 ```typescript
-import { format, type Options } from "@suin/printree";
+import { format } from "@suin/printree";
 
 // Define your tree node types
 type Node = Parent | Leaf;
 type Parent = { kind: string; children: Node[] };
 type Leaf = { kind: string; value: string };
-
-// Configure how to format your tree
-const options: Options<Node> = {
-  getChildren(node) {
-    return "children" in node ? node.children : undefined;
-  },
-  formatNode(node) {
-    let text = node.kind;
-    if ("value" in node) {
-      text += `: ${JSON.stringify(node.value)}`;
-    }
-    return text;
-  },
-};
 
 // Create your tree
 const tree: Node = {
@@ -58,7 +45,20 @@ const tree: Node = {
 };
 
 // Format it!
-console.log(format(tree, options));
+const result = format(tree, {
+  mapping: {
+    getChildren: node => "children" in node ? node.children : undefined,
+    toText: node => {
+      let text = node.kind;
+      if ("value" in node) {
+        text += `: ${JSON.stringify(node.value)}`;
+      }
+      return text;
+    },
+  },
+});
+
+console.log(result);
 ```
 
 Output:
@@ -76,18 +76,9 @@ type Entry = Directory | File;
 type Directory = { type: "directory"; name: string; children: Entry[] };
 type File = { type: "file"; name: string };
 
-const options: Options<Entry> = {
-  getChildren(node) {
-    return node.type === "directory" ? node.children : undefined;
-  },
-  formatNode(node) {
-    return node.name;
-  },
-};
-
 const tree: Entry = {
   type: "directory",
-  name: "project",
+  name: ".",
   children: [
     {
       type: "directory",
@@ -97,20 +88,100 @@ const tree: Entry = {
         { type: "file", name: "utils.ts" },
       ],
     },
-    { type: "file", name: "README.md" },
+    {
+      type: "directory",
+      name: "test",
+      children: [
+        { type: "file", name: "index.test.ts" },
+        { type: "file", name: "utils.test.ts" },
+      ],
+    },
   ],
 };
 
-console.log(format(tree, options));
+const result = format(tree, {
+  mapping: {
+    getChildren: node => node.type === "directory" ? node.children : undefined,
+    toText: node => node.name,
+  },
+});
+
+console.log(result);
 ```
 
 Output:
 ```
-project
+.
 ├─ src
 │  ├─ index.ts
 │  └─ utils.ts
-└─ README.md
+└─ test
+   ├─ index.test.ts
+   └─ utils.test.ts
+```
+
+### JSON AST Example
+
+```typescript
+type Node = ObjectNode | ArrayNode | ValueNode;
+type ObjectNode = { type: "Object"; properties: Record<string, Node> };
+type ArrayNode = { type: "Array"; elements: Node[] };
+type ValueNode = { type: "Scalar"; value: string };
+
+const ast: Node = {
+  type: "Object",
+  properties: {
+    hello: { type: "Scalar", value: "world" },
+    nested: {
+      type: "Object",
+      properties: {
+        array: {
+          type: "Array",
+          elements: [
+            { type: "Scalar", value: "one" },
+            { type: "Scalar", value: "two" },
+          ],
+        },
+      },
+    },
+  },
+};
+
+const result = format(ast, {
+  mapping: {
+    getChildren: node => {
+      if (node.type === "Array") {
+        return node.elements;
+      }
+      if (node.type === "Object") {
+        return Object.entries(node.properties).map(([name, node]) => ({
+          name,
+          node,
+        }));
+      }
+      return undefined;
+    },
+    toText: (node, { name }) => {
+      const propertyName = name ? `${name}: ` : "";
+      if (node.type === "Scalar") {
+        return `${propertyName}${JSON.stringify(node.value)}`;
+      }
+      return `${propertyName}${node.type}`;
+    },
+  },
+});
+
+console.log(result);
+```
+
+Output:
+```
+Object
+├─ hello: "world"
+└─ nested: Object
+   └─ array: Array
+      ├─ "one"
+      └─ "two"
 ```
 
 ### Advanced Features
@@ -118,82 +189,127 @@ project
 #### Node Indices
 
 ```typescript
-const options: Options<Node> = {
-  // ...
-  formatNode(node, { index }) {
-    return index !== undefined ? `${index} ${node.name}` : node.name;
+const result = format(tree, {
+  mapping: {
+    getChildren: node => "children" in node ? node.children : undefined,
+    toText: (node, { index }) => {
+      let text = node.kind;
+      if ("value" in node) {
+        text += `: ${JSON.stringify(node.value)}`;
+      }
+      return index !== undefined ? `${index} ${text}` : text;
+    },
   },
-};
+});
 ```
 
 Output:
 ```
-root
+0 root
 ├─ 0 node
-│  ├─ 0 leaf
-│  └─ 1 leaf
+│  ├─ 0 leaf: "Hello"
+│  └─ 1 leaf: "World!"
 └─ 1 node
+   ├─ 0 leaf: "Bonjour"
+   └─ 1 leaf: "le monde!"
 ```
 
 #### Children Count
 
 ```typescript
-const options: Options<Node> = {
-  // ...
-  formatNode(node, { children }) {
-    return children ? `${node.name}[${children.length}]` : node.name;
+const result = format(tree, {
+  mapping: {
+    getChildren: node => "children" in node ? node.children : undefined,
+    toText: (node, { children }) => {
+      let text = node.kind;
+      if (children) {
+        text += `[${children.length}]`;
+      }
+      if ("value" in node) {
+        text += `: ${JSON.stringify(node.value)}`;
+      }
+      return text;
+    },
   },
-};
+});
 ```
 
 Output:
 ```
 root[2]
 ├─ node[2]
-│  ├─ leaf
-│  └─ leaf
-└─ node[0]
+│  ├─ leaf: "Hello"
+│  └─ leaf: "World!"
+└─ node[2]
+   ├─ leaf: "Bonjour"
+   └─ leaf: "le monde!"
 ```
 
-#### Labeled Nodes
+## API Reference
 
-```typescript
-const options: Options<Node> = {
-  // ...
-  formatNode(node, { label }) {
-    return label ? `${label}: ${node.name}` : node.name;
-  },
-};
-```
+### `format<T>(input: Input<T>, options: Options<T>): string`
 
-Output:
-```
-root
-├─ key1: value1
-└─ key2: value2
-```
-
-## API
-
-### `format<T>(tree: T | ReadonlyArray<T>, options: Options<T>): string`
-
-Formats a tree structure or array of nodes into an ASCII tree representation.
+Formats a tree structure into a human-readable ASCII tree representation.
 
 #### Options
 
 ```typescript
 interface Options<T> {
-  // Get children of a node (return undefined for leaf nodes)
-  getChildren(node: T): ReadonlyArray<T> | ReadonlyArray<LabeledNode<T>> | undefined;
-  
-  // Format a node into a string
-  formatNode(node: T, opts: {
-    readonly label?: string;
-    readonly children?: ReadonlyArray<T> | ReadonlyArray<LabeledNode<T>>;
-    readonly index?: number;
-  }): string;
+  /** Mapping configuration for transforming the input tree */
+  readonly mapping: Mapping<T>;
+  /** Optional rendering configuration for customizing the output appearance */
+  readonly rendering?: undefined | RenderingOptions;
+}
+
+interface Mapping<T> {
+  /** Get children of a node (return undefined for leaf nodes) */
+  getChildren(node: T): undefined | Children<T>;
+  /** Generate text representation of a node */
+  toText(node: T, context: Context<T>): string;
+}
+
+interface Context<T> {
+  /** Optional name for labeled nodes */
+  readonly name?: undefined | string;
+  /** Index of the node among its siblings */
+  readonly index: number;
+  /** Children of the node if any */
+  readonly children?: undefined | ReadonlyArray<T | ReadonlyArray<T>>;
 }
 ```
+
+## Architecture
+
+### Data Flow
+
+```mermaid
+flowchart LR
+    input["Input Tree<br>(Any Structure)"]
+    transformed["Transformed Tree<br>(Rendering Data model)"]
+    rendered["Rendered Tree<br>(ASCII Art String)"]
+
+    input -- transform --> transformed
+    transformed -- render --> rendered
+```
+
+### Module Structure
+
+```mermaid
+classDiagram
+    class format {
+        +format<T>(input, options)
+    }
+    class transform {
+        +transform<T>(input, mapping)
+    }
+    class render {
+        +render(input, options?)
+    }
+
+    format ..> transform : uses
+    format ..> render : uses
+```
+
 
 ## License
 
