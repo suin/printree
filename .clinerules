@@ -11,6 +11,53 @@ test:
     - description: Run a specific test case
       command: bunx vitest --no-color --run "render tree with single node" packages/printree/ts/render.test.ts
 
+create_pr:
+  description: Steps for creating a pull request from a topic branch
+  steps:
+    - description: Create and switch to a topic branch
+      command: git checkout -b ${branch_name}
+    - description: Stage changes
+      command: git add .
+    - description: Review changes and determine commit type
+      mannually: |
+        Check staged changes with:
+        git diff --staged
+
+        Determine commit type:
+        - feat: New feature
+        - fix: Bug fix
+        - docs: Documentation changes
+        - style: Code style changes (formatting, etc)
+        - refactor: Code refactoring
+        - test: Adding or updating tests
+        - chore: Maintenance tasks
+    - description: Create commit message
+      mannually: |
+        Format: <type>: <description>
+
+        Examples:
+        - feat: add user authentication
+        - fix: resolve null pointer in logger
+        - docs: update API documentation
+        - style: format using prettier
+        - refactor: simplify error handling
+        - test: add unit tests for auth
+        - chore: update dependencies
+    - description: Commit changes with sign-off
+      command: git commit -s -m "${commit_message}"
+    - description: Push to remote
+      command: git push origin ${branch_name}
+    - description: Create pull request
+      command: gh pr create --title "${commit_message}" --body "${pr_body}"
+
+merge_after_ci:
+  description: Steps for merging a pull request after CI passes
+  steps:
+    - description: Wait for CI to pass and check status
+      command: gh pr checks ${pr_number}
+    - description: Merge PR and cleanup branches
+      command: gh pr merge ${pr_number} --merge --delete-branch
+
 release:
   description: Steps for creating a new release
   steps:
