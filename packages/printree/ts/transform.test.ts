@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { leaf, parent } from "./render.js";
 import { transform } from "./transform.js";
 
 describe("transform", () => {
