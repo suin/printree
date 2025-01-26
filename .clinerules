@@ -1,0 +1,12 @@
+test:
+  command: bunx vitest --no-color --run
+  description: Command for running tests
+  examples:
+    - description: Run all tests
+      command: bunx vitest --no-color --run
+
+    - description: Run tests in a specific file
+      command: bunx vitest --no-color --run packages/printree/ts/render.test.ts
+
+    - description: Run a specific test case
+      command: bunx vitest --no-color --run "render tree with single node" packages/printree/ts/render.test.ts
